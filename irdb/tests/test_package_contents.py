@@ -7,11 +7,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from scopesim.effects.data_container import DataContainer
 from astropy.io.ascii import InconsistentTableError
 
+from scopesim.effects.data_container import DataContainer
+from astar_utils import BadgeReport
+
 from irdb.utils import get_packages, recursive_filename_search
-from irdb.badges import BadgeReport
 from irdb.fileversions import IRDBFile
 
 
