@@ -5,10 +5,10 @@ import os
 
 class LSSInputs:
     def __init__(self):
-        self.slit_length = 2.*u.deg
+        self.slit_length = 1.*u.deg
         self.slit_width = 2.*u.arcsec
-        self.x_0 = 0.*u.deg # actually at 3.5*u.deg according to ETC
         self.y_0 = 0.*u.deg
+        self.x_0 = 0.*u.deg # actually at 3.5*u.deg according to ETC
         self.pixel_scale = 0.80*u.arcsec
         self.plate_scale = 80.*u.arcsec/u.mm
         self.gap_size = 100 # in pixels, haven't done anything with this yet
@@ -43,15 +43,15 @@ class LSSInputs:
     def make_slit_geometry(self, outfile="UVIM_LSS_slit_geometry.dat"):
         slit_length = (self.slit_length).to(u.arcsec) # (1 deg/72 mm ?)
         slit_width = (self.slit_width).to(u.arcsec) # 2 pixels or 20 microns
-        # relative to the field, located at 3.5 deg in x direction, and centered in y direction +/- 0.5 deg
+        # relative to the field, located at 3.5 deg in y direction, and centered in x direction +/- 0.5 deg
         # need four coords to define rectangular aperture
-        # y is the spatial direction, x is the spectral
+        # x is the spatial direction, y is the spectral (to be consistent with ScopeSim)
         x_0 = (self.x_0).to(u.arcsec)
         y_0 = (self.y_0).to(u.arcsec)
-        slit_coords = np.array([[x_0.value - slit_width.value/2, y_0.value - slit_length.value/2],
-                                [x_0.value - slit_width.value/2, y_0.value + slit_length.value/2],
-                                [x_0.value + slit_width.value/2, y_0.value + slit_length.value/2],
-                                [x_0.value + slit_width.value/2, y_0.value - slit_length.value/2]])
+        slit_coords = np.array([[x_0.value - slit_length.value/2, y_0.value - slit_width.value/2],
+                                [x_0.value + slit_length.value/2, y_0.value - slit_width.value/2],
+                                [x_0.value + slit_length.value/2, y_0.value + slit_width.value/2],
+                                [x_0.value - slit_length.value/2, y_0.value + slit_width.value/2]])
         # write to dat file (but don't overwrite if it already exists)
         if not os.path.exists(outfile):
             np.savetxt(outfile, slit_coords, fmt="%f", delimiter="    ", header="x    y")
@@ -62,7 +62,7 @@ class LSSInputs:
     def make_spectral_trace(self, slit_geometry="UVIM_LSS_slit_geometry.dat", 
                             infile="inputs/UVEXS_Spectral_Resolution_R2000.txt", 
                             outfile="UVIM_LSS_spectral_trace.fits",
-                            n_slit_positions=40):
+                            n_slit_positions=400):
         
         data = np.loadtxt(infile, skiprows=2, unpack=True)
         wavelength = data[0] * u.nm
@@ -72,8 +72,12 @@ class LSSInputs:
 
         # get slit geometry in spatial direction for centering the trace
         slit_coords = np.loadtxt(slit_geometry, skiprows=1)
-        slit_s_min = np.min(slit_coords[:,1]) # in arcsec
-        slit_s_max = np.max(slit_coords[:,1]) # in arcsec
+        # Determine which direction is spatial (longer dimension)
+        x_extent = abs(slit_coords[:,0].max() - slit_coords[:,0].min())
+        y_extent = abs(slit_coords[:,1].max() - slit_coords[:,1].min())
+        spatial_col = 0 if x_extent > y_extent else 1  # 0=horizontal, 1=vertical
+        slit_s_min = np.min(slit_coords[:,spatial_col]) # in arcsec
+        slit_s_max = np.max(slit_coords[:,spatial_col]) # in arcsec
         slit_s_center = (slit_s_min + slit_s_max) / 2 
 
         # assume the slit is centered on detector, so 2048 pixels in each direction
