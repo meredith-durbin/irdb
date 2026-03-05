@@ -1,7 +1,7 @@
 object: detector
 alias: DET
 name: uvex_detector
-description: A single 4096x4096 CMOS detector
+description: A 3x3 mosaic of CMOS detectors (each 4096x4096)
 source:
 
 properties:
@@ -16,14 +16,19 @@ effects:
     include: True
     kwargs:
       array_dict:
-        id: [1]
-        pixsize: [0.01]
-        angle: [0.]
-        gain: [1.2]
-        x_cen: [0]
-        y_cen: [0]
-        x_size: [2.56]
-        y_size: [2.56]
+        id:      [1,    2,    3,    4,   5,   6,    7,    8,    9]
+        pixsize: [0.01, 0.01, 0.01, 0.01,0.01,0.01, 0.01, 0.01, 0.01]
+        angle:   [0.0,  0.0,  0.0,  0.0, 0.0, 0.0,  0.0,  0.0,  0.0]
+        gain:    [1.2,  1.2,  1.2,  1.2, 1.2, 1.2,  1.2,  1.2,  1.2]
+
+        # 3x3 mosaic centers in mm with 41.96 mm pitch (40.96 mm chip + 1.00 mm gap)
+        x_cen:   [-41.96, 0.0, 41.96,  -41.96, 0.0, +41.96,  -41.96, 0.0, +41.96]
+        y_cen:   [+41.96, +41.96, +41.96,  0.0, 0.0, 0.0,  -41.96, -41.96, -41.96]
+
+        # Physical chip size in mm for 4096 pixels at 0.01 mm/pixel
+        x_size:  [40.96, 40.96, 40.96, 40.96,40.96,40.96, 40.96, 40.96, 40.96]
+        y_size:  [40.96, 40.96, 40.96, 40.96,40.96,40.96, 40.96, 40.96, 40.96]
+
       x_cen_unit: mm
       y_cen_unit: mm
       x_size_unit: mm
@@ -32,31 +37,47 @@ effects:
       angle_unit: deg
       gain_unit: electron/adu
 
-#  - name: qe_curve
-#    description: Quantum efficiency curve
-#    class: QuantumEfficiencyCurve
-#    kwargs:
-#      filename: tbd.dat
+  # QE is intentionally NOT included here (handled separately for NUV and FUV)
 
-#  - name: dark_current
-#    description: CMOS detector dark current
-#    class: DarkCurrent
-#    # [e-/s] level of dark current for each detector
+#  - name: bias
+#    description: Constant electronic bias offset added to the readout
+#    class: Bias
 #    kwargs:
-#      value: 0.003
+#      value: 0
 
-#  - name: detector_linearity
-#    description: Linearity characteristics of H4RG chips
-#    class: LinearityCurve
-#    kwargs:
-#      filename: tbd.dat
+  - name: dark_current
+    description: CMOS detector dark current
+    class: DarkCurrent
+    kwargs:
+      value: 0.003 # [e-/s]
 
-#  - name: shot_noise
-#    description: apply poisson shot noise to images
-#    class: ShotNoise
+  - name: detector_linearity
+    description: Detector linearity and saturation characteristics
+    class: LinearityCurve
+    include: False
+    kwargs:
+      filename: tbd_det_linearity.dat
 
-#  - name: readout_noise
-#    description: Readout noise frames
-#    class: BasicReadoutNoise
-#    kwargs:
-#      noise_std: 3
+  - name: shot_noise
+    description: Apply poisson shot noise to images
+    class: ShotNoise
+
+  - name: readout_noise
+    description: Readout noise frames
+    class: BasicReadoutNoise
+    kwargs:
+      noise_std: 3
+
+  - name: inter_pixel_capacitance
+    description: Inter-pixel capacitance (IPC) convolution kernel
+    class: InterPixelCapacitance
+    include: False
+    kwargs:
+      filename: tbd_ipc_kernel.fits
+
+  - name: reference_pixel_border
+    description: Reference pixel border handling (optional; detector-specific)
+    class: ReferencePixelBorder
+    include: False
+    kwargs:
+      n_border: 4
